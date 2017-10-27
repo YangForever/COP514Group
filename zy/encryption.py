@@ -53,8 +53,8 @@ def BitewiseXOR(mesg):
     print result.astype(str)
     return result
             
-
-
+            
+        
 mesg = [['10111111'], ['01010101']]
 mesg = Subsititution(mesg)
 mesg_bits = Permutation(mesg)
