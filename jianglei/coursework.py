@@ -28,6 +28,10 @@ sbox= np.array(['63','7c','77','7b','f2','6b','6f','c5','30','01','67','2b','fe'
 '8c','a1','89','0d','bf','e6','42','68','41','99','2d','0f','b0','54','bb','16',])
 
 def Substitution(inputval):
+    # inputval include 8 characters. the shape of inputval is 1*8. i.e. inputval has 8 lists and every list has 8 elements.
+    # so inputval has 64 elements in total.
+    # the dimension of sbox has been changed as 1. therefore each character in the string can been transformed to the type of
+    # int and find the corresponding value in sbox accorinding to the integer.
     block=np.reshape(inputval, [-1, 8])
     intlis = []
     for i in range(int(np.size(block)/8)):
@@ -78,7 +82,8 @@ def readPlaintest(plaintext):
         batch.append(ASCcode[i*8:(i+1)*8])
     if len(ASCcode)%8==0:
         batchnumber=i+1
-        return batch,batchnumber
+        paddingnumber=0
+        return batch,batchnumber,paddingnumber
     else:
         paddingnumber=8 - len(ASCcode) % 8
         for j in range(paddingnumber):
@@ -107,10 +112,13 @@ def encryption(inputval,key):
         key = keyGenerator(key)
     return inputval
 
-def decryption(paddingnumber,batchnumber,plaintextRecover):
+def decryption(paddingnumber,batchnumber,outlis,cypher):
+    plaintextRecover = []
     decrpt = ''
+    for j in range(batchnumber):
+      plaintextRecover.append(Xor(outlis[j], np.reshape(cypher[j], [8, 8])))
     plaintextRecoveroneDim = np.reshape(plaintextRecover, [-1, 8])
-    for i in range((batchnumber) * 8 - paddingnumber):
+    for i in range((batchnumber) * 8-paddingnumber ):
         decrpt = decrpt + chr(int(''.join(str(s) for s in plaintextRecoveroneDim[i]), 2))
     print("decrption: ",decrpt)
 
@@ -121,46 +129,77 @@ def decryption(paddingnumber,batchnumber,plaintextRecover):
          #     'affected. The community will come together and do all it can for the surviving children and relations."'
 
 def main(count, plaintext, key):
-
     key_temp=''
     key_temp=key_temp+''.join([bin(int('1'+key1,16))[3:] for key1 in key])
     key=key_temp
     count_temp=''
     count_temp = count_temp + ''.join([bin(int('1' + count_initial, 16))[3:] for count_initial in count])
     count = np.reshape(list(count_temp), [8, 8])
-
-
     print("plaintext: ",plaintext)
-    batch,batchnumber,paddingnumber=readPlaintest(plaintext)
+    global paddingnumber,batchnumber1
+    batch,batchnumber1,paddingnumber=readPlaintest(plaintext)
     cypher = []
-    #count = pseudo_random()
     lis1 = [0, 0, 0, 0, 0, 0, 0, 1]
-    #count.extend(lis1)
-    outlis=[]
-    for i in range(batchnumber):
+    for i in range(batchnumber1):
         inputval = count
         #key='1010100100100101111101011011010101010010001010100111101010101011'
         key=np.reshape(list(key),[-1,8])
         outputval=encryption(inputval, key)
-        outlis.append(outputval)
-        a=[]
+        batch_plaintext=[]
         for col in range(8):
-            a.append(np.reshape(list(batch[i][col]),[1,8]))
-        cypher.append(Xor(outputval,np.reshape(a,[8,8])))
+            batch_plaintext.append(np.reshape(list(batch[i][col]),[1,8]))
+        cypher.append(Xor(outputval,np.reshape(batch_plaintext,[8,8])))
         text=''.join(str(e) for e in lis1)
         lis1=list(bin(int(text,2)+1+256)[3:])
         count[56:]=lis1
+    shap=np.shape(cypher)
+    output_t = np.reshape(cypher, [1, -1])[0]
+    output_text = ''
+    for i in range(0, int(len(output_t) / 4)):
+        temp = output_t[i * 4:i * 4 + 4]
+        b = hex(int(''.join(str(i) for i in temp), 2))
+        output_text += b[2:]
+    return output_text
 
-    plaintextRecover=[]
-    for j in range(batchnumber):
-        plaintextRecover.append(Xor(outlis[j], np.reshape(cypher[j], [8, 8])))
-
-    decryption(paddingnumber, batchnumber, plaintextRecover)
-
-main('1234567890123456','Bank statements will be reviewed to establish.', '0101010101010101')
 
 
+def main1(count,cypher,key):
+    cypher_temp = ''
+    cypher_temp = cypher_temp + ''.join([bin(int('1' + cypher1, 16))[3:] for cypher1 in cypher])
+    print (paddingnumber)
+    cypher=np.reshape(np.array(list(cypher_temp)),[batchnumber1,8,8])
+    key_temp = ''
+    key_temp = key_temp + ''.join([bin(int('1' + key1, 16))[3:] for key1 in key])
+    key = key_temp
+    count_temp = ''
+    count_temp = count_temp + ''.join([bin(int('1' + count_initial, 16))[3:] for count_initial in count])
+    count = np.reshape(list(count_temp), [8, 8])
+    batchnumber=len(cypher)
+    batch=cypher
+    lis1 = [0, 0, 0, 0, 0, 0, 0, 1]
+    outlis = []
+    cypher1=[]
+    for i in range(batchnumber):
+        inputval = count
+        key = np.reshape(list(key), [-1, 8])
+        outputval = encryption(inputval, key)
+        outlis.append(outputval)
+        a = []
+        for col in range(8):
+            a.append(np.reshape(list(batch[i][col]), [1, 8]))
+        cypher1.append(Xor(outputval, np.reshape(a, [8, 8])))
+        text = ''.join(str(e) for e in lis1)
+        lis1 = list(bin(int(text, 2) + 1 + 256)[3:])
+        count[56:] = lis1
+    decryption(paddingnumber, batchnumber, outlis, cypher)
+    return cypher1
 
+cypher=main('1234567890123456','Bank statements will be reviewed to establish which funds belong to the paying parent, ' \
+             'and both account holders will be given the right to make their case before any money is taken.', '0101010101010101')
+
+print (cypher)
+
+main1('1234567890123456',cypher,'0101010101010101')
 
 
 
