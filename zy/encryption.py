@@ -1,6 +1,6 @@
 import numpy as np
 import time
-import s_box
+import s_box2
 import random
 
 KEYS = []
@@ -13,41 +13,68 @@ def split_bits_string(mesg_string):
     return mesg_bits
 
 def Subsititution(mesg): # mesg array ['1','0','1','0'(64)]
-    sbox = s_box.a.flatten()
    # print sbox
     mesg.resize(8,8)   # [[],[]...] 8x8 array
     for i in range(len(mesg)):
         x = ''.join(bit for bit in mesg[i])
         hex_num = hex(int(x, 2))
         seq = int(hex_num, 0)
-    #    print int(sbox[seq], 16)
-        bit_string = '{0:08b}'.format(int(sbox[seq], 16))
+     #   print str(s_box2.sbox[seq])
+        bit_string = '{0:08b}'.format(s_box2.sbox[seq])
         mesg[i] = split_bits_string(bit_string) # mesg should be [[],[]] 8x8 array
     return mesg
 
 def Permutation(mesg): # mesg is 8x8 array
     row = len(mesg)
     col = len(mesg[0])
-    print 'bits:'
-    print mesg
+    # print 'bits:'
+    # print mesg
     for i in range(0, col):
 	mesg[:, i] = np.roll(mesg[:,i], i)
     return mesg
 
-def Genkeys():
+def Genkeys(init_key): # 16 key
     global KEYS
-    seed = random.randint(0, 30000)
-    key = ['{0:016b}'.format(seed)]
-    KEYS.append(key)
-    return key
+    key_str = '{0:064b}'.format(int(init_key, 16))
+    KEYS.append([key_str])
+    for i in range(5):
+        new_key = ''
+        new_key += BitewiseXOR(key_str[0:8], key_str[8:16], 0)
+        new_key += '{0:08b}'.format(s_box2.sbox[int(key_str[8:16],2)])
+
+        new_key += BitewiseXOR(key_str[16:24], key_str[24:32], 0)
+        new_key += '{0:08b}'.format(s_box2.sbox[int(key_str[24:32],2)])
+
+        new_key += BitewiseXOR(key_str[32:40], key_str[40:48], 0)
+        new_key += '{0:08b}'.format(s_box2.sbox[int(key_str[40:48],2)])
+
+        new_key += BitewiseXOR(key_str[48:56], key_str[56:64], 0)
+        new_key += '{0:08b}'.format(s_box2.sbox[int(key_str[56:64],2)])
+
+        key_str = new_key
+        KEYS.append([key_str])
+    print 'key'
+    for i in range(len(KEYS)):
+        print KEYS[i]
+
  
-def BitewiseXOR(mesg): # mesg 8x8 array
-    key = Genkeys()
-    Keyarray = np.asarray(key)
-    #print 'Key'
-    #print int(Keyarray[0])
-    #print 'flatten'
-    #print int(mesg.flatten())
-    result = np.add(Keyarray[0].astype(int), mesg.flatten().astype(int)) % 2
-    #print result.astype(str)
-    return result.astype(str)
+def BitewiseXOR(mesg1, mesg2 , round_num): # mesg 8x8 array
+    if mesg2 == None:
+        key = split_bits_string(KEYS[round_num][0])
+        Keyarray = np.asarray(key)
+#       print 'Key'
+#       print Keyarray[0]
+#       print 'flatten'
+#       print mesg.flatten()
+        result = np.add(Keyarray[0].astype(int), mesg1.flatten().astype(int)) % 2
+        return result.astype(str)
+    #   print result.astype(str)
+    else:
+        mesg1 = split_bits_string(mesg1)
+        mesg2 = split_bits_string(mesg2)
+        result = np.add(np.asarray(mesg1).astype(int), np.asarray(mesg2).astype(int)) % 2
+        result = ''.join(str(bit) for bit in result)
+        return result
+
+
+
